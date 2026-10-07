@@ -24,7 +24,8 @@ export async function dispatchGenerationToQStash(generationPayload) {
   }
 
   const targetUrl = CANONICAL_WORKER_URL;
-  const qstashEndpoint = `https://qstash.upstash.io/v2/publish/${encodeURIComponent(targetUrl)}`;
+  const qstashBase = (process.env.QSTASH_URL || 'https://qstash.upstash.io').replace(/\/+$/, '');
+  const qstashEndpoint = `${qstashBase}/v2/publish/${encodeURIComponent(targetUrl)}`;
 
   try {
     const res = await fetch(qstashEndpoint, {
