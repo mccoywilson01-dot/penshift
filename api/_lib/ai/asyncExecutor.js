@@ -46,10 +46,10 @@ export async function dispatchGenerationToQStash(generationPayload) {
       data = JSON.parse(rawText);
     } catch (_) {}
 
-    if (res.status === 200 && data?.messageId) {
+    if ((res.status === 200 || res.status === 201) && data?.messageId) {
       return {
         success: true,
-        status: 200,
+        status: res.status,
         messageId: data.messageId,
         deduplicated: false,
       };
