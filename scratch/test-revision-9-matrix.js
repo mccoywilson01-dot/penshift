@@ -394,7 +394,7 @@ async function runAsyncTests() {
     assert(fs.existsSync(renderPath), 'render.yaml must exist');
     const renderYaml = fs.readFileSync(renderPath, 'utf8');
 
-    assert(renderYaml.includes('buildCommand: npm install && npm run build'), 'build command must be npm install && npm run build');
+    assert(renderYaml.includes('buildCommand: npm install --include=dev && npm run build'), 'build command must be npm install --include=dev && npm run build');
     assert(renderYaml.includes('startCommand: npm start'), 'start command must be npm start');
     assert(renderYaml.includes('healthCheckPath: /api/health'), 'health check path must be /api/health');
 
