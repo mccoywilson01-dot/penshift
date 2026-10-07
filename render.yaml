@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: penshift
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: VITE_SUPABASE_URL
+        sync: false
+      - key: VITE_SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: QSTASH_TOKEN
+        sync: false
+      - key: QSTASH_CURRENT_SIGNING_KEY
+        sync: false
+      - key: QSTASH_NEXT_SIGNING_KEY
+        sync: false
+      - key: PENSHIFT_QSTASH_WORKER_URL
+        sync: false
+      - key: PENSHIFT_RECONCILE_URL
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: GEMINI_API_KEY_1
+        sync: false
+      - key: GROQ_API_KEY_1
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: GUEST_COOKIE_SECRET
+        sync: false
