@@ -1,15 +1,45 @@
+import { Receiver } from '@upstash/qstash';
 import { getSupabaseServiceClient } from '../_lib/supabase.js';
 import { getJobState, dispatchGenerationToQStash } from '../_lib/ai/asyncExecutor.js';
 import { isTerminalStatus, getJobLockKey } from '../_lib/ai/generationLifecycle.js';
 import { getRedis } from '../_lib/rateLimiter.js';
 
+export const CANONICAL_RECONCILE_URL = process.env.PENSHIFT_RECONCILE_URL || 'https://penshift.com/api/internal/reconcile';
+
 export default async function handler(req, res) {
-  // Reject requests without valid CRON_SECRET authorization
+  const signature = req.headers['upstash-signature'];
   const authHeader = req.headers.authorization;
   const cronSecret = process.env.CRON_SECRET;
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-    return res.status(401).json({ error: 'UNAUTHORIZED_CRON' });
+  let isAuthorized = false;
+
+  // 1. Upstash QStash cryptographic signature verification
+  if (signature) {
+    const rawBody = req.rawBody ? req.rawBody.toString('utf-8') : '';
+    const upstashRegion = req.headers['upstash-region'];
+    const receiver = new Receiver({
+      currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY || '',
+      nextSigningKey: process.env.QSTASH_NEXT_SIGNING_KEY || '',
+    });
+
+    const isValid = await receiver.verify({
+      signature,
+      body: rawBody,
+      url: CANONICAL_RECONCILE_URL,
+      upstashRegion,
+    }).catch(() => false);
+
+    if (!isValid) {
+      return res.status(401).json({ error: 'INVALID_QSTASH_SIGNATURE' });
+    }
+    isAuthorized = true;
+  } else if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
+    // 2. Authorization Bearer CRON_SECRET fallback (e.g. manual invocation or custom headers)
+    isAuthorized = true;
+  }
+
+  if (!isAuthorized) {
+    return res.status(401).json({ error: 'UNAUTHORIZED_RECONCILE' });
   }
 
   const client = getSupabaseServiceClient();
