@@ -16,7 +16,6 @@ playwright-report/
 test-results/
 screenshots/
 artifacts/
-scratch/*.png
-scratch/*.tar.gz
+scratch/
 supabase/.temp/
 .agents/
