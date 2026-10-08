@@ -61,6 +61,11 @@ function applySecurityHeaders(res) {
   res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: https: blob:; connect-src 'self' https://vpgluvkotanjmbameaxn.supabase.co; worker-src 'self' blob:; manifest-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+  );
 }
 
 /**
@@ -87,13 +92,46 @@ function enhanceResponse(res) {
   };
 }
 
+const ROUTE_BODY_LIMITS = {
+  '/api/generate': 1 * 1024 * 1024, // 1 MB (prompt + metadata)
+  '/api/internal/worker/generation': 2 * 1024 * 1024, // 2 MB (QStash dispatch envelope)
+  '/api/_internal/worker/generation': 2 * 1024 * 1024,
+  '/api/grammar': 256 * 1024, // 256 KB
+  '/api/plagiarism': 256 * 1024, // 256 KB
+  '/api/readability': 256 * 1024, // 256 KB
+  '/api/internal/reconcile': 64 * 1024, // 64 KB
+  '/api/_internal/reconcile': 64 * 1024,
+  '/api/health': 1024, // 1 KB
+};
+const DEFAULT_MAX_BODY_BYTES = 512 * 1024; // 512 KB
+
 /**
- * Safely parse body if applicable, while preserving async iterable stream for QStash signature verification.
+ * Safely parse body with route-aware size limits, while preserving async iterable stream for QStash signature verification.
  */
-async function parseRequestBody(req) {
+async function parseRequestBody(req, pathname = '') {
+  const maxBytes = ROUTE_BODY_LIMITS[pathname] || DEFAULT_MAX_BODY_BYTES;
+
+  const cl = req.headers['content-length'];
+  if (cl) {
+    const contentLength = parseInt(cl, 10);
+    if (!Number.isNaN(contentLength) && contentLength > maxBytes) {
+      const err = new Error('PAYLOAD_TOO_LARGE');
+      err.statusCode = 413;
+      throw err;
+    }
+  }
+
   const chunks = [];
+  let totalBytes = 0;
   for await (const chunk of req) {
-    chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    const buf = typeof chunk === 'string' ? Buffer.from(chunk) : chunk;
+    totalBytes += buf.length;
+    if (totalBytes > maxBytes) {
+      const err = new Error('PAYLOAD_TOO_LARGE');
+      err.statusCode = 413;
+      throw err;
+    }
+    chunks.push(buf);
   }
   const rawBody = Buffer.concat(chunks);
   req.rawBody = rawBody;
@@ -120,7 +158,13 @@ async function parseRequestBody(req) {
  */
 function serveStaticFile(req, res, pathname) {
   const safePath = path.normalize(pathname).replace(/^(\.\.[/\\])+/, '');
-  let filePath = path.join(DIST_DIR, safePath);
+  let filePath = path.resolve(DIST_DIR, '.' + path.sep + safePath);
+
+  if (!filePath.startsWith(DIST_DIR)) {
+    res.statusCode = 403;
+    res.end('Forbidden');
+    return;
+  }
 
   // Check if target is a directory or path without extension
   if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
@@ -179,7 +223,7 @@ const server = http.createServer(async (req, res) => {
     const handler = API_ROUTES[pathname];
     if (handler) {
       res.setHeader('Cache-Control', 'no-store');
-      await parseRequestBody(req);
+      await parseRequestBody(req, pathname);
       return await handler(req, res);
     }
 
@@ -197,6 +241,12 @@ const server = http.createServer(async (req, res) => {
     res.statusCode = 405;
     res.end('Method Not Allowed');
   } catch (err) {
+    if (err.statusCode === 413 || err.message === 'PAYLOAD_TOO_LARGE') {
+      if (!res.headersSent) {
+        res.statusCode = 413;
+        return res.json({ error: 'PAYLOAD_TOO_LARGE', message: 'Request body exceeds maximum allowed size for this route.' });
+      }
+    }
     console.error('Unhandled Server Error:', err);
     if (!res.headersSent) {
       res.statusCode = 500;

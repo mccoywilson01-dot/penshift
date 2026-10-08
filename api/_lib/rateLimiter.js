@@ -16,10 +16,10 @@ const memoryTombstones = new Map();
 export function getClientIp(req) {
   if (!req || !req.headers) return '127.0.0.1';
 
-  // 1. Edge header fallback (retained for backward compatibility and test suites)
-  const edgeIp = req.headers['x-vercel-forwarded-for'] || req.headers['cf-connecting-ip'];
-  if (edgeIp && typeof edgeIp === 'string') {
-    const ip = edgeIp.split(',')[0].trim().replace(/[^a-fA-F0-9:.]/g, '');
+  // 1. Cloudflare authoritative connecting IP (cannot be spoofed through Cloudflare)
+  const cfIp = req.headers['cf-connecting-ip'];
+  if (cfIp && typeof cfIp === 'string') {
+    const ip = cfIp.split(',')[0].trim().replace(/[^a-fA-F0-9:.]/g, '');
     if (ip) return ip;
   }
 
@@ -38,7 +38,16 @@ export function getClientIp(req) {
     }
   }
 
-  // 3. Direct socket connection fallback
+  // 3. Dev / legacy test fallback
+  if (process.env.PENSHIFT_DEV_MODE === 'true') {
+    const edgeIp = req.headers['x-vercel-forwarded-for'];
+    if (edgeIp && typeof edgeIp === 'string') {
+      const ip = edgeIp.split(',')[0].trim().replace(/[^a-fA-F0-9:.]/g, '');
+      if (ip) return ip;
+    }
+  }
+
+  // 4. Direct socket connection fallback
   const socketIp = req.socket?.remoteAddress || req.connection?.remoteAddress || '127.0.0.1';
   const cleanSocket = String(socketIp).replace(/^::ffff:/, '').trim().replace(/[^a-fA-F0-9:.]/g, '');
   return cleanSocket || '127.0.0.1';
@@ -60,9 +69,17 @@ export function verifyCookieValue(cookieVal) {
   const parts = cookieVal.split('.');
   if (parts.length !== 2) return null;
   const [guestId, hmac] = parts;
-  const expected = crypto.createHmac('sha256', getCookieSecret()).update(guestId).digest('hex').slice(0, 32);
-  if (crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(expected))) {
-    return guestId;
+  if (!guestId || !hmac || typeof hmac !== 'string' || hmac.length !== 32) return null;
+
+  try {
+    const expected = crypto.createHmac('sha256', getCookieSecret()).update(guestId).digest('hex').slice(0, 32);
+    const hmacBuf = Buffer.from(hmac, 'utf8');
+    const expectedBuf = Buffer.from(expected, 'utf8');
+    if (hmacBuf.length === expectedBuf.length && crypto.timingSafeEqual(hmacBuf, expectedBuf)) {
+      return guestId;
+    }
+  } catch (_) {
+    return null;
   }
   return null;
 }

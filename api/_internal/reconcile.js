@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { Receiver } from '@upstash/qstash';
 import { getSupabaseServiceClient } from '../_lib/supabase.js';
 import { getJobState, dispatchGenerationToQStash } from '../_lib/ai/asyncExecutor.js';
@@ -33,9 +34,15 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'INVALID_QSTASH_SIGNATURE' });
     }
     isAuthorized = true;
-  } else if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
-    // 2. Authorization Bearer CRON_SECRET fallback (e.g. manual invocation or custom headers)
-    isAuthorized = true;
+  } else if (cronSecret && typeof authHeader === 'string') {
+    // 2. Authorization Bearer CRON_SECRET fallback (e.g. manual diagnostics)
+    // Uses constant-time digest comparison to prevent timing side channels
+    const expectedHeader = `Bearer ${cronSecret}`;
+    const authDigest = crypto.createHash('sha256').update(authHeader).digest();
+    const expectedDigest = crypto.createHash('sha256').update(expectedHeader).digest();
+    if (crypto.timingSafeEqual(authDigest, expectedDigest)) {
+      isAuthorized = true;
+    }
   }
 
   if (!isAuthorized) {
