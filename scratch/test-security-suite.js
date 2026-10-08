@@ -52,9 +52,9 @@ async function runSSRFTests() {
 async function runRateLimiterTests() {
   console.log('\n--- 2. Rate Limiting Tests ---');
   
-  // Test IP extraction
-  const reqVercel = { headers: { 'x-vercel-forwarded-for': '203.0.113.195' } };
-  assert(getClientIp(reqVercel) === '203.0.113.195', 'Extracts trusted Vercel header IP');
+  // Test IP extraction (authoritative Cloudflare edge header)
+  const reqCf = { headers: { 'cf-connecting-ip': '203.0.113.195' } };
+  assert(getClientIp(reqCf) === '203.0.113.195', 'Extracts trusted Cloudflare cf-connecting-ip');
 
   const reqFallback = { headers: { 'x-forwarded-for': '198.51.100.20, 10.0.0.1' } };
   // In production, untrusted x-forwarded-for is rejected to prevent spoofing

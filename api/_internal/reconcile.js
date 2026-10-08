@@ -69,6 +69,14 @@ export default async function handler(req, res) {
       .limit(25);
 
     if (error) {
+      if (error.code === 'PGRST205' || error.message?.includes('schema cache')) {
+        console.warn('[reconcile] Table public.generations not yet found in Supabase schema cache. Migration pending.');
+        return res.status(200).json({
+          reconciledCount: 0,
+          pendingMigration: true,
+          message: 'Table public.generations not yet found in Supabase schema cache. Run migration to enable durable reconciliation.',
+        });
+      }
       return res.status(500).json({ error: 'DATABASE_QUERY_ERROR', details: error.message });
     }
 

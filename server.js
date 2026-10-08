@@ -250,7 +250,11 @@ const server = http.createServer(async (req, res) => {
     console.error('Unhandled Server Error:', err);
     if (!res.headersSent) {
       res.statusCode = 500;
-      res.json({ error: 'INTERNAL_SERVER_ERROR', message: err.message });
+      const isProd = process.env.NODE_ENV === 'production';
+      res.json({
+        error: 'INTERNAL_SERVER_ERROR',
+        message: isProd ? 'An unexpected server error occurred.' : err.message,
+      });
     }
   }
 });
