@@ -56,7 +56,18 @@ export function getClientIp(req) {
 // ═══════════════════════════════════ GUEST COOKIE MANAGEMENT ═══════════════════════════════════
 
 function getCookieSecret() {
-  return process.env.GUEST_COOKIE_SECRET || process.env.UPSTASH_REDIS_REST_TOKEN || 'penshift-guest-secret-token-key-2026';
+  const explicit = process.env.GUEST_COOKIE_SECRET;
+  const isDefaultOrPublic = !explicit || explicit === 'penshift-guest-secret-token-key-2026';
+  if (!isDefaultOrPublic) {
+    return explicit;
+  }
+  // In production, never sign with the publicly known static GitHub string; fallback to private server-side secrets
+  return (
+    process.env.UPSTASH_REDIS_REST_TOKEN ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.CRON_SECRET ||
+    'penshift-guest-secret-token-key-2026'
+  );
 }
 
 export function signCookieValue(guestId) {
