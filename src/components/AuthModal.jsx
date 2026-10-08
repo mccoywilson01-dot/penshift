@@ -4,12 +4,12 @@ import { X, Mail, Lock, Loader2, LogOut } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
 import { getSafeAuthRedirectUrl } from '../lib/authRedirect.js'
 
-export default function AuthModal({ open, onClose, session }) {
+export default function AuthModal({ open, onClose, session, initialMsg = null }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [isSignUp, setIsSignUp] = useState(false)
-  const [msg, setMsg] = useState(null)
+  const [msg, setMsg] = useState(initialMsg)
 
   // Track mount status with ref (not state) to prevent stale closures in async handlers
   const mountedRef = useRef(true)
@@ -24,8 +24,12 @@ export default function AuthModal({ open, onClose, session }) {
   }, [])
 
   useEffect(() => {
-    if (!open) { setEmail(''); setPassword(''); setMsg(null); setLoading(false); }
-  }, [open]);
+    if (open) {
+      if (initialMsg) setMsg(initialMsg);
+    } else {
+      setEmail(''); setPassword(''); setMsg(null); setLoading(false);
+    }
+  }, [open, initialMsg]);
 
   const focusableRef = useRef([])
 

@@ -60,13 +60,20 @@ export class GroqProvider extends BaseProvider {
       'qwen/qwen3.8-27b',
     ].filter((v, i, a) => a.indexOf(v) === i);
 
+    const sysText = (typeof prompt === 'object' && prompt?.system)
+      ? prompt.system
+      : (options.systemPrompt || systemPrompt || 'You are a professional AI content specialist. Follow all instructions exactly. Never add preamble or commentary.');
+    const userContent = typeof prompt === 'string'
+      ? prompt
+      : (prompt?.user || JSON.stringify(prompt));
+
     for (const model of modelCandidates) {
       try {
         const payload = {
           model,
           messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: typeof prompt === 'string' ? prompt : (prompt.user || JSON.stringify(prompt)) },
+            { role: 'system', content: sysText },
+            { role: 'user', content: userContent },
           ],
           temperature,
           max_tokens: maxTokens,

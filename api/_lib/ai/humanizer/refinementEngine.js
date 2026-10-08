@@ -108,13 +108,14 @@ export function buildRefinementPrompt(sourceEnvelope, currentDraft, critique, op
     : 'Maintain complete factual equivalence.';
 
   const SYSTEM_REPAIR_INSTRUCTIONS = `You are PenShift's Elite Semantic Refinement Specialist.
-An initial transformation candidate was rejected by our strict semantic verification engine because it violated factual, numeric, or polarity invariants.
+An initial transformation candidate needed fine-tuning to perfectly match factual, numeric, and semantic invariants while retaining a rich, human voice.
 
 YOUR CONTRACT:
-Repair and rewrite the candidate by grounding directly in the AUTHORITATIVE ORIGINAL SOURCE.
-THE ORIGINAL SOURCE IS THE SOLE TRUTH. NEVER PRIORITIZE THE DRAFT OVER THE ORIGINAL SOURCE.
+1. Repair and rewrite the text grounded in the facts of the AUTHORITATIVE ORIGINAL SOURCE.
+2. MANDATE: You MUST rewrite into natural, fluent human prose with authentic sentence cadence. DO NOT simply output or copy the raw original source text verbatim.
+3. Fix the detected defects while keeping the human style, natural rhythm, and active sentence flow.
 
-CRITICAL DEFECTS DETECTED IN DRAFT (MUST REPAIR ALL):
+CRITICAL DEFECTS DETECTED IN PREVIOUS ATTEMPT:
 ${repairList}
 
 FACT LOCK INVARIANTS:
@@ -123,20 +124,20 @@ FACT LOCK INVARIANTS:
 - Negations count: ${factLock.negations?.length || 0}
 
 STYLE MANDATE:
-Keep the writing natural, engaging, and in ${mode.toUpperCase()} MODE, but NEVER at the expense of facts, negations, or numbers.
+Write in natural, engaging human cadence (${mode.toUpperCase()} MODE). Never sacrifice factual fidelity, but never output an unhumanized verbatim copy of the source.
 
 CLEAN OUTPUT:
-Output ONLY the final corrected humanized text. No explanation, no prefix.`;
+Output ONLY the refined humanized text. No conversational preamble, no quotes, no commentary.`;
 
-  const USER_REPAIR_PROMPT = `<authoritative_original_source>
+  const USER_REPAIR_PROMPT = `<authoritative_source_facts>
 ${sourceEnvelope.normalizedText}
-</authoritative_original_source>
+</authoritative_source_facts>
 
-<flawed_previous_draft>
+<previous_draft>
 ${currentDraft}
-</flawed_previous_draft>
+</previous_draft>
 
-Produce the corrected, semantically faithful humanized text now:`;
+Produce the improved humanized text now (do not output the original source verbatim):`;
 
   return {
     system: SYSTEM_REPAIR_INSTRUCTIONS,

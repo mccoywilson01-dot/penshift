@@ -36,21 +36,21 @@ let poolsInitialized = false;
 export function initPools() {
   if (poolsInitialized) return;
 
-  const g1 = process.env.GEMINI_API_KEY_1 || process.env.GEMINI_API_KEY;
-  const g2 = process.env.GEMINI_API_KEY_2;
-  const gr1 = process.env.GROQ_API_KEY_1 || process.env.GROQ_API_KEY;
-  const gr2 = process.env.GROQ_API_KEY_2;
-
   KEY_POOLS.gemini.keys = [];
   KEY_POOLS.groq.keys = [];
 
-  if (g1) KEY_POOLS.gemini.keys.push(g1);
-  if (g2) KEY_POOLS.gemini.keys.push(g2);
-  if (gr1) KEY_POOLS.groq.keys.push(gr1);
-  if (gr2) KEY_POOLS.groq.keys.push(gr2);
+  for (let i = 1; i <= 10; i++) {
+    const gk = process.env[`GEMINI_API_KEY_${i}`];
+    if (gk) KEY_POOLS.gemini.keys.push(gk);
+    const grk = process.env[`GROQ_API_KEY_${i}`];
+    if (grk) KEY_POOLS.groq.keys.push(grk);
+  }
 
-  KEY_POOLS.gemini.keys = [...new Set(KEY_POOLS.gemini.keys)];
-  KEY_POOLS.groq.keys = [...new Set(KEY_POOLS.groq.keys)];
+  if (process.env.GEMINI_API_KEY) KEY_POOLS.gemini.keys.push(process.env.GEMINI_API_KEY);
+  if (process.env.GROQ_API_KEY) KEY_POOLS.groq.keys.push(process.env.GROQ_API_KEY);
+
+  KEY_POOLS.gemini.keys = [...new Set(KEY_POOLS.gemini.keys.filter(Boolean))];
+  KEY_POOLS.groq.keys = [...new Set(KEY_POOLS.groq.keys.filter(Boolean))];
 
   const gLen = KEY_POOLS.gemini.keys.length;
   KEY_POOLS.gemini.failures = new Array(gLen).fill(0);

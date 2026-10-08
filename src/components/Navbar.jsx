@@ -18,10 +18,25 @@ export default function Navbar() {
   const [open, setOpen]         = useState(false)
   const [session, setSession]   = useState(null)
   const [showAuth, setShowAuth] = useState(false)
+  const [authError, setAuthError] = useState(null)
   const location = useLocation()
 
   useEffect(() => {
     fetch('/api/health').catch(() => {});
+
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash && hash.includes('error=')) {
+        const params = new URLSearchParams(hash.replace(/^#/, ''));
+        const desc = params.get('error_description') || params.get('error') || 'Authentication link is invalid or has expired.';
+        setAuthError({ type: 'error', text: desc.replace(/\+/g, ' ') });
+        setShowAuth(true);
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      } else if (hash && hash.includes('access_token=')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+
     if (supabase) {
       supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
         setSession(currentSession);
@@ -171,7 +186,12 @@ export default function Navbar() {
         </div>
       </header>
 
-      <AuthModal open={showAuth} onClose={() => setShowAuth(false)} session={session} />
+      <AuthModal 
+        open={showAuth} 
+        onClose={() => { setShowAuth(false); setAuthError(null); }} 
+        session={session} 
+        initialMsg={authError} 
+      />
     </>
   )
 }

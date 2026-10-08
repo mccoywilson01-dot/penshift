@@ -308,6 +308,7 @@ export default async function handler(req, res) {
           try {
             genRes = await activeProvider.generate({
               prompt: promptPayload,
+              systemPrompt: promptPayload?.system,
               model: route.actual_model,
               temperature: mode === 'aggressive' ? 0.82 : (mode === 'formal' ? 0.65 : 0.72),
             });
@@ -315,6 +316,7 @@ export default async function handler(req, res) {
             console.warn(`[worker] Primary provider draft failed: ${genErr.message}. Trying fallback provider...`);
             genRes = await fallbackProvider.generate({
               prompt: promptPayload,
+              systemPrompt: promptPayload?.system,
               model: route.fallback_model,
               temperature: 0.7,
             });
@@ -370,18 +372,30 @@ export default async function handler(req, res) {
             try {
               const refineGen = await activeProvider.generate({
                 prompt: refinePrompt,
+                systemPrompt: refinePrompt?.system,
                 model: route.actual_model,
                 temperature: 0.65,
               });
-              refineResult = { text: cleanOutput(refineGen.text), repaired: true };
+              const cleanedRefine = cleanOutput(refineGen.text);
+              const isVerbatim = cleanedRefine.trim().toLowerCase() === sourceEnvelope.normalizedText.trim().toLowerCase();
+              refineResult = {
+                text: (!isVerbatim && cleanedRefine) ? cleanedRefine : draftResult.text,
+                repaired: !isVerbatim,
+              };
             } catch (_) {
               try {
                 const fallbackRefine = await fallbackProvider.generate({
                   prompt: refinePrompt,
+                  systemPrompt: refinePrompt?.system,
                   model: route.fallback_model,
                   temperature: 0.65,
                 });
-                refineResult = { text: cleanOutput(fallbackRefine.text), repaired: true };
+                const cleanedFallback = cleanOutput(fallbackRefine.text);
+                const isVerbatim = cleanedFallback.trim().toLowerCase() === sourceEnvelope.normalizedText.trim().toLowerCase();
+                refineResult = {
+                  text: (!isVerbatim && cleanedFallback) ? cleanedFallback : draftResult.text,
+                  repaired: !isVerbatim,
+                };
               } catch (__) {
                 refineResult = { text: draftResult.text, repaired: false };
               }
@@ -429,7 +443,18 @@ export default async function handler(req, res) {
         console.warn(`[worker] Semantic quality audit note for ${generationId}: [${violationTypes || 'NON_CRITICAL_VARIATION'}]`);
       }
 
-      finalOutputText = refineResult?.text || draftResult?.text || inputText;
+      const isInputEcho = (txt) => {
+        if (!txt || typeof txt !== 'string' || !inputText) return false;
+        return txt.trim().toLowerCase() === inputText.trim().toLowerCase();
+      };
+
+      const preferredCandidate = (!isInputEcho(refineResult?.text) && refineResult?.text)
+        || (!isInputEcho(draftResult?.text) && draftResult?.text)
+        || refineResult?.text
+        || draftResult?.text
+        || inputText;
+
+      finalOutputText = preferredCandidate;
       finalQualityMetrics = finalAuditResult?.finalEval?.metrics || {};
       finalDiffArtifact = finalAuditResult?.diffArtifact || null;
     } else {
