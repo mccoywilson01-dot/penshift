@@ -5,7 +5,8 @@ import { getJobState, dispatchGenerationToQStash } from '../_lib/ai/asyncExecuto
 import { isTerminalStatus, getJobLockKey } from '../_lib/ai/generationLifecycle.js';
 import { getRedis } from '../_lib/rateLimiter.js';
 
-export const CANONICAL_RECONCILE_URL = process.env.PENSHIFT_RECONCILE_URL || 'https://penshift.com/api/internal/reconcile';
+const defaultReconcileBase = (process.env.RENDER_EXTERNAL_URL || 'https://penshift.onrender.com').replace(/\/+$/, '');
+export const CANONICAL_RECONCILE_URL = process.env.PENSHIFT_RECONCILE_URL || `${defaultReconcileBase}/api/internal/reconcile`;
 
 export default async function handler(req, res) {
   const signature = req.headers['upstash-signature'];

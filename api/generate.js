@@ -59,9 +59,9 @@ export const TRANSPORT_HANDOFF_TIMEOUT_MS = 42000;
  * Guards against writing to sockets destroyed or ended by clients or edge proxies.
  */
 export function isSocketWritable(req, res) {
-  if (!req || !res) return false;
-  if (req.destroyed || req.socket?.destroyed) return false;
+  if (!res) return false;
   if (res.destroyed || res.writableEnded) return false;
+  if (res.socket && (res.socket.destroyed || !res.socket.writable)) return false;
   return true;
 }
 
@@ -76,7 +76,7 @@ function getProvider(providerName) {
 
 async function handleCorsAndAuth(req, res) {
   const origin = req.headers.origin;
-  const allowed = (process.env.ALLOWED_ORIGINS || 'https://penshift.com').split(',').map((s) => s.trim());
+  const allowed = (process.env.ALLOWED_ORIGINS || 'https://penshift.onrender.com,https://penshift.com').split(',').map((s) => s.trim());
   const isDev = process.env.PENSHIFT_DEV_MODE === 'true' && (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin));
   const isAllowedOrigin = origin && allowed.includes(origin);
 

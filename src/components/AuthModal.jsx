@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X, Mail, Lock, Loader2, LogOut } from 'lucide-react'
 import { supabase } from '../lib/supabase.js'
+import { getSafeAuthRedirectUrl } from '../lib/authRedirect.js'
 
 export default function AuthModal({ open, onClose, session }) {
   const [email, setEmail] = useState('')
@@ -112,7 +113,13 @@ export default function AuthModal({ open, onClose, session }) {
       if (isSignUp) {
         if (password.length < 6) throw new Error('Password must be at least 6 characters')
         if (!supabase) throw new Error('Authentication is not configured')
-        const { error } = await supabase.auth.signUp({ email, password })
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: getSafeAuthRedirectUrl(),
+          },
+        })
         if (error) throw error
         setMsg({ type: 'success', text: 'Check your email for the confirmation link!' })
         setPassword('')

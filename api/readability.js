@@ -13,7 +13,7 @@ function countSyllables(word) {
 
 export const maxDuration = 60;
 export default async function handler(req, res) {
-  const allowed = (process.env.ALLOWED_ORIGINS || 'https://penshift.com').split(',').map(o => o.trim());
+  const allowed = (process.env.ALLOWED_ORIGINS || 'https://penshift.onrender.com,https://penshift.com').split(',').map(o => o.trim());
   const reqOrigin = req.headers.origin;
   const isDev = process.env.PENSHIFT_DEV_MODE === 'true' && (!reqOrigin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(reqOrigin));
   const isAllowedOrigin = reqOrigin && allowed.includes(reqOrigin);

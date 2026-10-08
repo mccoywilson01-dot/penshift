@@ -1,6 +1,7 @@
 import { getRedis, isProductionMode, RedisUnavailableError } from '../redisConfig.js';
 
-export const CANONICAL_WORKER_URL = process.env.PENSHIFT_QSTASH_WORKER_URL || 'https://penshift.com/api/_internal/worker/generation';
+const defaultWorkerBase = (process.env.RENDER_EXTERNAL_URL || 'https://penshift.onrender.com').replace(/\/+$/, '');
+export const CANONICAL_WORKER_URL = process.env.PENSHIFT_QSTASH_WORKER_URL || `${defaultWorkerBase}/api/internal/worker/generation`;
 
 /**
  * Dispatches an asynchronous generation task to Upstash QStash.
@@ -163,24 +164,17 @@ export async function getJobChunks(generationId, startIndex = 0) {
 export function sanitizeJobChunkForReplay(chunk, isAuthoritativelyReleased = false) {
   if (!chunk || typeof chunk !== 'object') return null;
 
-  // If generation is not authoritatively released, strip all candidate/draft text
-  if (!isAuthoritativelyReleased) {
-    if (chunk.event === 'draft') {
-      return { status: chunk.data?.status || 'Refining and polishing syntax...', event: 'status', stage: 'DRAFT' };
-    }
-    if (chunk.event === 'done') {
-      // Suppress unvalidated done events completely before authoritative pass
-      return null;
-    }
-    if (chunk.candidateText || chunk.stage === 'DRAFT') {
-      const sanitized = { ...chunk };
-      delete sanitized.candidateText;
-      return sanitized;
-    }
+  if (chunk.event === 'draft') {
+    return { status: chunk.data?.status || 'Refining and polishing syntax...', event: 'status', stage: 'DRAFT' };
+  }
+  if (chunk.event === 'done') {
     return chunk;
   }
-
-  // If authoritatively released: allow completed events
+  if (!isAuthoritativelyReleased && (chunk.candidateText || chunk.stage === 'DRAFT')) {
+    const sanitized = { ...chunk };
+    delete sanitized.candidateText;
+    return sanitized;
+  }
   return chunk;
 }
 

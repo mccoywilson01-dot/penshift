@@ -9,7 +9,7 @@ export const maxDuration = 10;
 export default async function handler(req, res) {
   // CORS & Methods
   const origin = req.headers?.origin;
-  const allowed = (process.env.ALLOWED_ORIGINS || 'https://penshift.com').split(',').map(s => s.trim());
+  const allowed = (process.env.ALLOWED_ORIGINS || 'https://penshift.onrender.com,https://penshift.com').split(',').map(s => s.trim());
   const isDev = process.env.PENSHIFT_DEV_MODE === 'true' && (!origin || /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin));
   const isAllowedOrigin = origin && allowed.includes(origin);
 
