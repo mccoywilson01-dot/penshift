@@ -189,7 +189,7 @@ export async function executeSemanticVerification(sourceText, candidateText, opt
     verifierProvider = null,
     verifierProviderName = null,
     verifierModel = null,
-    timeoutMs = 8000,
+    timeoutMs = 12000,
     allowStructuralOnlyTesting = false,
   } = options;
 

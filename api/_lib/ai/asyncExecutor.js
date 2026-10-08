@@ -166,7 +166,7 @@ export function sanitizeJobChunkForReplay(chunk, isAuthoritativelyReleased = fal
   // If generation is not authoritatively released, strip all candidate/draft text
   if (!isAuthoritativelyReleased) {
     if (chunk.event === 'draft') {
-      return { status: 'Refining and polishing syntax...', event: 'status', stage: 'DRAFT' };
+      return { status: chunk.data?.status || 'Refining and polishing syntax...', event: 'status', stage: 'DRAFT' };
     }
     if (chunk.event === 'done') {
       // Suppress unvalidated done events completely before authoritative pass

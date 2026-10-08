@@ -49,6 +49,7 @@
   },
   "overrides": {
     "undici": "^6.27.1",
-    "path-to-regexp": "^6.3.0"
+    "path-to-regexp": "^6.3.0",
+    "braces": "^3.0.3"
   }
 }

@@ -189,7 +189,7 @@ export function evaluateStructuralEntailment(sourceGraph, candidateGraph, option
 /**
  * Executes a single directional LLM verifier request with strict timeout and schema verification.
  */
-async function executeDirectionalVerifier(direction, prompt, verifierProvider, verifierModel, timeoutMs = 8000) {
+async function executeDirectionalVerifier(direction, prompt, verifierProvider, verifierModel, timeoutMs = 12000) {
   const timeoutPromise = new Promise((_, reject) => {
     setTimeout(() => reject(new Error('VERIFIER_TIMEOUT')), timeoutMs);
   });
@@ -244,7 +244,7 @@ export async function verifyBidirectionalEntailment(sourceText, candidateText, s
     verifierModel = null,
     riskScore = 0.0,
     isHighRisk = riskScore > 0.6,
-    timeoutMs = 8000,
+    timeoutMs = 12000,
     allowStructuralOnlyTesting = false,
   } = options;
 
