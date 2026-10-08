@@ -165,7 +165,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    await setJobState(generationId, { status: 'RUNNING', startedAt: Date.now() });
+    await setJobState(generationId, { status: 'RUNNING', startedAt: Date.now(), guestId, userId });
 
     const route = matchProviderAndModel({
       task,
@@ -569,6 +569,8 @@ export default async function handler(req, res) {
       scores: finalScores,
       actual_provider: route.actual_provider,
       actual_model: route.actual_model,
+      guestId,
+      userId,
     });
 
     await pushJobChunk(generationId, {
@@ -589,7 +591,7 @@ export default async function handler(req, res) {
     if (err instanceof RedisUnavailableError || err.name === 'RedisUnavailableError' || err.code === 'REDIS_UNAVAILABLE') {
       return res.status(503).json({ error: 'REDIS_UNAVAILABLE', message: err.message });
     }
-    await setJobState(generationId, { status: 'FAILED', error: err.message }).catch(() => {});
+    await setJobState(generationId, { status: 'FAILED', error: err.message, guestId, userId }).catch(() => {});
     return res.status(500).json({ error: 'GENERATION_FAILED', message: err.message });
   } finally {
     if (redis) {

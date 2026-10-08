@@ -690,6 +690,14 @@ export default async function handler(req, res) {
   }
 
   if (process.env.QSTASH_TOKEN) {
+    await setJobState(generationId, {
+      status: 'QUEUED',
+      generationId,
+      guestId,
+      userId,
+      createdAt: Date.now(),
+    }).catch(() => {});
+
     if (wantsSSE) {
       res.write(formatSSE({ status: 'QUEUED', generationId, event: 'status' }));
     }
